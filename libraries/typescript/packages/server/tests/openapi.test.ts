@@ -195,6 +195,69 @@ async function connect(
 }
 
 describe("MCPServer.fromOpenAPI", () => {
+  it.each([
+    { serialization: {}, expected: "/v1/items?color=red&size=3" },
+    {
+      serialization: { style: "form", explode: false },
+      expected: "/v1/items?filter=color%2Cred%2Csize%2C3",
+    },
+    {
+      serialization: { style: "deepObject", explode: true },
+      expected: "/v1/items?filter%5Bcolor%5D=red&filter%5Bsize%5D=3",
+    },
+    {
+      serialization: { style: "spaceDelimited", explode: false },
+      expected: "/v1/items?filter=color+red+size+3",
+    },
+    {
+      serialization: { style: "pipeDelimited", explode: false },
+      expected: "/v1/items?filter=color%7Cred%7Csize%7C3",
+    },
+  ])(
+    "serializes object query parameters: $serialization",
+    async ({ serialization, expected }) => {
+      captured.length = 0;
+      const spec: OpenAPIDocument = {
+        openapi: "3.1.0",
+        info: { title: "Items API" },
+        servers: [{ url: upstreamBaseUrl }],
+        paths: {
+          "/items": {
+            get: {
+              operationId: "getItems",
+              parameters: [
+                {
+                  name: "filter",
+                  in: "query",
+                  ...serialization,
+                  schema: {
+                    type: "object",
+                    properties: {
+                      color: { type: "string" },
+                      size: { type: "number" },
+                    },
+                  },
+                },
+              ],
+              responses: { "200": { description: "ok" } },
+            },
+          },
+        },
+      };
+      const connection = await connect(MCPServer.fromOpenAPI({ spec }));
+      try {
+        const result = await connection.client.callTool({
+          name: "getItems",
+          arguments: { filter: { color: "red", size: 3 } },
+        });
+        expect(result.isError).not.toBe(true);
+        expect(captured.at(-1)?.url).toBe(expected);
+      } finally {
+        await connection.close();
+      }
+    }
+  );
+
   it("uses spec identity and registers only included operations", async () => {
     const server = MCPServer.fromOpenAPI({
       spec: createSpec(),
