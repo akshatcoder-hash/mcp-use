@@ -77,9 +77,13 @@ Only JSON-compatible request bodies are exposed, under the `body` input.
 Supported media types are `application/json`, `application/*+json`, and
 specific media types containing `+json`. Other body encodings are not sent.
 
-Array query values are serialized as repeated keys:
-`?tag=one&tag=two`. OpenAPI query serialization styles such as comma-separated
-or deep-object encoding are not interpreted.
+Array query values are serialized as repeated keys, such as `?tag=one&tag=two`,
+regardless of `style` or `explode`.
+
+Flat object query values default to `style: form` and `explode: true`.
+For example, `filter: { color: "red", size: 3 }` becomes `?color=red&size=3`.
+Objects also support `form` with `explode: false`, `deepObject` with
+`explode: true`, and `spaceDelimited` or `pipeDelimited` with `explode: false`.
 
 ## Understand tool names
 

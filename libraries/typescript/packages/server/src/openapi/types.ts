@@ -61,6 +61,10 @@ export interface OpenAPIParameterObject {
   required?: boolean;
   /** Parameter value schema. */
   schema?: OpenAPISchemaObject | OpenAPIReferenceObject;
+  /** Serialization style for object-valued query parameters. */
+  style?: string;
+  /** Whether object-valued query properties are serialized separately. */
+  explode?: boolean;
 }
 
 /** An OpenAPI request body definition. */

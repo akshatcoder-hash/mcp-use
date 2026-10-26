@@ -502,7 +502,7 @@ function buildUrl(
     if (parameter.in !== "query") continue;
     const value = params[inputName];
     if (value === undefined || value === null || value === "") continue;
-    appendQueryParam(url, parameter.name, value);
+    appendQueryParam(url, parameter, value);
   }
   return url.toString();
 }
@@ -539,7 +539,12 @@ function resolveBaseUrl(options: FromOpenAPIOptions): string {
   return baseUrl;
 }
 
-function appendQueryParam(url: URL, name: string, value: unknown): void {
+function appendQueryParam(
+  url: URL,
+  parameter: OpenAPIParameterObject,
+  value: unknown
+): void {
+  const { name } = parameter;
   if (Array.isArray(value)) {
     for (const item of value) {
       if (item !== undefined && item !== null && item !== "") {
@@ -547,6 +552,35 @@ function appendQueryParam(url: URL, name: string, value: unknown): void {
       }
     }
     return;
+  }
+  const object = readRecord(value);
+  if (object !== undefined) {
+    const style = parameter.style ?? "form";
+    const explode = parameter.explode ?? style === "form";
+    const entries = Object.entries(object);
+    if (explode && (style === "form" || style === "deepObject")) {
+      for (const [key, item] of entries) {
+        url.searchParams.append(
+          style === "deepObject" ? `${name}[${key}]` : key,
+          String(item)
+        );
+      }
+      return;
+    }
+    if (
+      style === "form" ||
+      style === "spaceDelimited" ||
+      style === "pipeDelimited"
+    ) {
+      const separator =
+        style === "spaceDelimited"
+          ? " "
+          : style === "pipeDelimited"
+            ? "|"
+            : ",";
+      url.searchParams.set(name, entries.flat().join(separator));
+      return;
+    }
   }
   url.searchParams.set(name, String(value));
 }
